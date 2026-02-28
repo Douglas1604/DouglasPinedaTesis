@@ -1,0 +1,162 @@
+/* Contenedor principal */
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  background-color: #f4f6f7;
+}
+
+/* Barra Lateral (Sidebar) UMG */
+.sidebar {
+  width: 260px;
+  background-color: #003366; /* Azul UMG */
+  color: white;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+}
+
+.sidebar-header {
+    margin-bottom: 2.5rem;
+    text-align: center;
+}
+
+.sidebar h2 {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* Menú de navegación */
+.sidebar ul { list-style: none; padding: 0; margin: 0; }
+.sidebar li { margin-bottom: 0.5rem; }
+
+.sidebar a {
+  color: #b3cce6; /* Azul claro para texto normal */
+  text-decoration: none;
+  font-size: 1.05rem;
+  display: block;
+  padding: 12px 15px;
+  border-radius: 8px;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.sidebar a:hover, .sidebar a.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.sidebar a.active {
+    border-left: 4px solid #CC0000; /* Indicador rojo UMG */
+    background-color: rgba(204, 0, 0, 0.1);
+}
+
+/* Separador */
+.divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.2);
+    margin: 1rem 0;
+}
+
+/* Botón de salir */
+.logout { margin-top: auto; }
+.logout a {
+    color: #ffcccc; /* Rojo claro */
+}
+.logout a:hover {
+    background-color: #CC0000;
+    color: white;
+}
+
+/* Contenido Principal */
+.content {
+    flex: 1;
+    padding: 2.5rem;
+    overflow-y: auto;
+}
+
+/* Encabezado UMG */
+.umg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 3rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 1.5rem;
+}
+
+.umg-header h1 {
+    color: #003366;
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+}
+
+.subtitle {
+    color: #666;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.user-info {
+    text-align: right;
+    color: #003366;
+}
+
+.user-info .role {
+    display: block;
+    font-size: 0.9rem;
+    color: #CC0000;
+    font-weight: 600;
+}
+
+.user-info .name {
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+/* Tarjetas (Cards) UMG */
+.cards { display: flex; gap: 25px; margin-bottom: 3rem; }
+
+.umg-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  flex: 1; /* Las tarjetas ocupan el mismo espacio */
+  text-align: center;
+  border-top: 4px solid #003366; /* Detalle azul UMG */
+  transition: transform 0.3s;
+}
+
+.umg-card:hover {
+    transform: translateY(-5px); /* Efecto al pasar el mouse */
+}
+
+.umg-card h3 {
+    color: #555;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.number {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #CC0000; /* Rojo UMG para los números */
+  margin: 0;
+}
+
+/* Sección de Bienvenida */
+.welcome-section {
+    background-color: #e6f0ff; /* Fondo azul muy claro */
+    padding: 2rem;
+    border-radius: 12px;
+    border-left: 5px solid #003366;
+}
+
+.welcome-section h3 {
+    color: #003366;
+    margin-top: 0;
+}

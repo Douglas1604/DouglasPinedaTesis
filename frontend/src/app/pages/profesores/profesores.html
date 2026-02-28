@@ -1,0 +1,89 @@
+<div class="dashboard-container">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+        <h2>UMG Admin</h2>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="/dashboard">🏠 Inicio</a></li>
+        <li><a href="/profesores" class="active">👨‍🏫 Profesores</a></li>
+        <li><a href="/alumnos">🎓 Alumnos</a></li>
+        <li class="divider"></li>
+        <li><a href="/sorteo">🎲 Realizar Sorteo</a></li>
+        <li><a href="/reportes">📊 Exportar Excel</a></li>
+        <li class="logout"><a href="/login">🚪 Salir</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <header class="umg-header">
+      <div>
+        <h1>Gestión de Catedráticos</h1>
+        <p class="subtitle">Administra los jurados para el sorteo de tesis</p>
+      </div>
+      <button class="btn-umg-add" (click)="abrirFormulario()">
+        <i class="fas fa-plus"></i> + Agregar Catedrático
+      </button>
+    </header>
+    
+<div class="table-container">
+      <table class="umg-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre Completo</th>
+            <th>Especialidad</th>
+            <th>Carga Máx (Alumnos)</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let prof of profesoresLista">
+            <td>{{ prof.id }}</td>
+            <td class="fw-bold">{{ prof.nombre_completo }}</td>
+            <td>{{ prof.especialidad }}</td>
+            <td>{{ prof.max_carga }}</td>
+            <td class="actions">
+              <button class="btn-edit">✏️ Editar</button>
+              <button class="btn-delete" (click)="eliminarProfesor(prof.id)">🗑️ Eliminar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" *ngIf="mostrarModal">
+  <div class="modal-content">
+    
+    <div class="modal-header">
+      <h2>Nuevo Catedrático</h2>
+      <button class="close-btn" (click)="cerrarFormulario()">✖</button>
+    </div>
+
+    <form (ngSubmit)="guardarProfesor()">
+      <div class="form-group">
+        <label>Nombre Completo *</label>
+        <input type="text" name="nombre" [(ngModel)]="nuevoProfesor.nombre_completo" placeholder="Ej. Ing. Juan Pérez" required>
+      </div>
+
+      <div class="form-group">
+        <label>Especialidad *</label>
+        <input type="text" name="especialidad" [(ngModel)]="nuevoProfesor.especialidad" placeholder="Ej. Bases de Datos, Redes..." required>
+      </div>
+
+      <div class="form-group">
+        <label>Carga Máxima de Alumnos</label>
+        <input type="number" name="carga" [(ngModel)]="nuevoProfesor.max_carga" min="1" max="50">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="cerrarFormulario()">Cancelar</button>
+        <button type="submit" class="btn-save">Guardar Catedrático</button>
+      </div>
+    </form>
+
+  </div>
+</div>

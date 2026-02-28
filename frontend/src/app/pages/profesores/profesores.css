@@ -1,0 +1,232 @@
+/* --- ESTILOS GENERALES Y MENÚ LATERAL (Igual al Dashboard) --- */
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  background-color: #f4f6f7;
+}
+
+.sidebar {
+  width: 260px;
+  background-color: #003366;
+  color: white;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+}
+
+.sidebar-header { margin-bottom: 2.5rem; text-align: center; }
+.sidebar h2 { margin: 0; font-weight: 700; letter-spacing: 1px; }
+
+.sidebar ul { list-style: none; padding: 0; margin: 0; }
+.sidebar li { margin-bottom: 0.5rem; }
+
+.sidebar a {
+  color: #b3cce6;
+  text-decoration: none;
+  font-size: 1.05rem;
+  display: block;
+  padding: 12px 15px;
+  border-radius: 8px;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.sidebar a:hover, .sidebar a.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.sidebar a.active {
+  border-left: 4px solid #CC0000;
+  background-color: rgba(204, 0, 0, 0.1);
+}
+
+.divider { height: 1px; background-color: rgba(255, 255, 255, 0.2); margin: 1rem 0; }
+.logout { margin-top: auto; }
+.logout a { color: #ffcccc; }
+.logout a:hover { background-color: #CC0000; color: white; }
+
+.content { flex: 1; padding: 2.5rem; overflow-y: auto; }
+
+.umg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* Alinea el texto y el botón al mismo nivel */
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 1.5rem;
+}
+
+.umg-header h1 { color: #003366; margin: 0 0 0.5rem 0; font-size: 2rem; }
+.subtitle { color: #666; margin: 0; font-size: 1.1rem; }
+
+/* --- ESTILOS ESPECÍFICOS PARA LA TABLA DE PROFESORES --- */
+.btn-umg-add {
+  background-color: #CC0000;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-umg-add:hover { background-color: #a30000; }
+
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  overflow: hidden;
+  border-top: 4px solid #003366;
+}
+
+.umg-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.umg-table th {
+  background-color: #f8f9fa;
+  color: #003366;
+  padding: 15px;
+  font-weight: 700;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.umg-table td {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+
+.umg-table tbody tr:hover { background-color: #f1f5f9; }
+
+.fw-bold { font-weight: 600; color: #333; }
+
+.actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 10px;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  margin-right: 5px;
+}
+
+.btn-edit { color: #0055a5; background-color: #e6f0ff; }
+.btn-edit:hover { background-color: #cce0ff; }
+
+.btn-delete { color: #CC0000; background-color: #ffe6e6; }
+.btn-delete:hover { background-color: #ffcccc; }
+
+/* ==========================================
+   ESTILOS DEL MODAL (VENTANA EMERGENTE)
+   ========================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 51, 102, 0.6); /* Azul UMG transparente */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Asegura que esté por encima de todo */
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  border-top: 5px solid #CC0000; /* Detalle Rojo UMG */
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.modal-header h2 {
+  color: #003366;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #999;
+  cursor: pointer;
+}
+
+.close-btn:hover { color: #CC0000; }
+
+.form-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-group input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #003366;
+  box-shadow: 0 0 5px rgba(0, 51, 102, 0.2);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 2rem;
+}
+
+.btn-cancel {
+  background: #f1f5f9;
+  color: #555;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-cancel:hover { background: #e2e8f0; }
+
+.btn-save {
+  background: #003366;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-save:hover { background: #002244; }
