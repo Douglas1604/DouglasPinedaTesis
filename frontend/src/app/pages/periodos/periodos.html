@@ -1,0 +1,85 @@
+<div class="dashboard-container">
+  <aside class="sidebar">
+    <div class="sidebar-header"><h2>UMG Admin</h2></div>
+    <nav>
+      <ul>
+        <li><a href="/dashboard">🏠 Inicio</a></li>
+        <li><a href="/periodos">📅 Períodos</a></li>
+        <li class="divider"></li>
+        <li><a href="/sorteo" class="active">🎲 Realizar Sorteo</a></li>
+        <li><a href="/reportes">📊 Exportar Excel</a></li>
+        <li class="logout"><a href="/login">🚪 Salir</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <header class="umg-header">
+      <div>
+        <h1>Gestión de Períodos</h1>
+        <p class="subtitle">Administra los ciclos académicos para agrupar los sorteos</p>
+      </div>
+      <button class="btn-umg-add" (click)="abrirFormulario()">
+        <i class="fas fa-plus"></i> + Crear Período
+      </button>
+    </header>
+    
+    <div class="table-container">
+      <table class="umg-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre del Período</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let per of periodosLista">
+            <td>{{ per.id }}</td>
+            <td class="fw-bold">{{ per.nombre }}</td>
+            <td>
+              <span [style.color]="per.activo === 1 ? '#15803d' : '#CC0000'" style="font-weight: bold;">
+                {{ per.activo === 1 ? '🟢 Activo' : '🔴 Inactivo' }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn-edit" (click)="editarPeriodo(per)">✏️ Editar</button>
+              <button class="btn-delete" (click)="eliminarPeriodo(per.id)" *ngIf="per.activo === 1">🚫 Desactivar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" *ngIf="mostrarModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 *ngIf="!editandoId">Nuevo Período</h2>
+      <h2 *ngIf="editandoId">Editar Período</h2>
+      <button class="close-btn" (click)="cerrarFormulario()">✖</button>
+    </div>
+
+    <form (ngSubmit)="guardarPeriodo()">
+      <div class="form-group">
+        <label>Nombre del Período *</label>
+        <input type="text" name="nombre" [(ngModel)]="nuevoPeriodo.nombre" placeholder="Ej. Ciclo I - 2026" required>
+      </div>
+      
+      <div class="form-group" *ngIf="editandoId">
+        <label>Estado del Período</label>
+        <select name="activo" [(ngModel)]="nuevoPeriodo.activo" class="form-select">
+          <option [ngValue]="1">Activo (Visible en Sorteos)</option>
+          <option [ngValue]="0">Inactivo (Cerrado)</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="cerrarFormulario()">Cancelar</button>
+        <button type="submit" class="btn-save">{{ editandoId ? 'Actualizar Cambios' : 'Guardar Período' }}</button>
+      </div>
+    </form>
+  </div>
+</div>
