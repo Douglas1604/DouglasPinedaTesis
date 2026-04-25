@@ -1,18 +1,21 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
-import { Sorteo } from './sorteo';
+// Se corrigió la importación para buscar SorteoComponent
+import { SorteoComponent } from './sorteo'; 
 
-describe('Sorteo', () => {
-  let component: Sorteo;
-  let fixture: ComponentFixture<Sorteo>;
+describe('SorteoComponent', () => {
+  let component: SorteoComponent;
+  let fixture: ComponentFixture<SorteoComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Sorteo]
+      // Se agregó HttpClientTestingModule para que el test reconozca las peticiones al server
+      imports: [SorteoComponent, HttpClientTestingModule] 
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(Sorteo);
+    fixture = TestBed.createComponent(SorteoComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
