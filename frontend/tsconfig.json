@@ -12,8 +12,10 @@
     "isolatedModules": true,
     "experimentalDecorators": true,
     "importHelpers": true,
+    "outDir": "./dist/out-tsc",
     "target": "ES2022",
-    "module": "preserve"
+    "module": "preserve",
+    "allowJs": false
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
@@ -29,5 +31,9 @@
     {
       "path": "./tsconfig.spec.json"
     }
+  ],
+  "exclude": [
+    "server.js",
+    "node_modules"
   ]
 }
