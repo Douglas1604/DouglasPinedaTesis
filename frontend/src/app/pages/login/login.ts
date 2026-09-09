@@ -1,8 +1,8 @@
 /**
  * @fileoverview Controlador de la pantalla de Inicio de Sesión (Login).
  * Este archivo se encarga de recolectar las credenciales del usuario, 
- * validarlas de lado del cliente y enviarlas al servicio de autenticación 
- * para verificar su acceso en la base de datos a través del backend.
+ * validarlas de lado del cliente (incluyendo restricción de dominio institucional)
+ * y enviarlas al servicio de autenticación para verificar su acceso.
  */
 
 import { Component } from '@angular/core';
@@ -30,17 +30,32 @@ export class LoginComponent {
 
   /**
    * @description Se ejecuta al hacer clic en el botón de "Ingresar".
-   * Empaqueta las credenciales y consume el endpoint de login del servidor.
-   * Si el acceso es correcto, crea la sesión local y redirige al panel principal.
+   * Valida dominios de correo institucionales, empaqueta las credenciales 
+   * y consume el endpoint de login del servidor.
    */
   onLogin() {
-    // Validación básica en el frontend para no hacer peticiones innecesarias al servidor
+    // Validación básica de campos vacíos
     if (!this.email || !this.password) {
       this.errorMessage = 'Por favor ingresa correo y contraseña';
       return;
     }
 
-    // Estructuramos el objeto JSON tal como lo espera nuestra API en Node.js
+    // =======================================================
+    // REGLA DE NEGOCIO: SOLO CORREOS INSTITUCIONALES UMG
+    // =======================================================
+    const dominiosValidos = ['@miumg.edu.gt', '@umg.edu.gt'];
+    
+    // Convertimos a minúsculas por seguridad y verificamos si termina en algún dominio válido
+    const esCorreoInstitucional = dominiosValidos.some(dominio => 
+      this.email.toLowerCase().endsWith(dominio)
+    );
+
+    if (!esCorreoInstitucional) {
+      this.errorMessage = 'Acceso denegado. Solo se permiten correos institucionales (@miumg.edu.gt o @umg.edu.gt).';
+      return; // Detenemos la ejecución aquí, no hacemos petición al backend
+    }
+
+    // Estructuramos el objeto JSON tal como lo espera nuestra API
     const credentials = {
       email: this.email,
       password_hash: this.password
@@ -49,15 +64,13 @@ export class LoginComponent {
     // Llamada asíncrona al servicio de autenticación
     this.authService.login(credentials).subscribe({
       next: (response) => {
-        // Guardamos la información del usuario en la memoria del navegador (localStorage)
-        // Esto nos sirve para mantener la sesión activa mientras usa el sistema
+        // Guardamos la información del usuario en la memoria del navegador
         localStorage.setItem('user', JSON.stringify(response.user));
         
         // Redirigimos al usuario directamente al panel de control (Dashboard)
         this.router.navigate(['/dashboard']);      
       },
       error: (error) => {
-        // Atrapamos cualquier rechazo del servidor (por ejemplo, el error 401 No Autorizado)
         console.error('Error de autenticación:', error);
         this.errorMessage = 'Correo o contraseña incorrectos';
       }

@@ -44,15 +44,22 @@
         <div style="display: flex; gap: 20px;">
           <div style="flex: 1;">
             <label style="font-weight: bold;"><i class="fas fa-chalkboard-teacher" style="color:#003366;"></i> Listado de Catedráticos</label>
-            <input type="file" (change)="leerExcel($event, 'profesores')" accept=".xlsx, .xls" class="form-control">
+            <input type="file" (change)="leerExcel($event, 'profesores')" accept=".xlsx, .xls" class="form-control" style="margin-bottom: 10px;">
+            <button class="btn-umg-play" style="background-color: #003366; font-size: 0.8rem; padding: 5px 10px; width: 100%;" (click)="generarPlantilla('profesores')">
+              <i class="fas fa-magic"></i> Generar Plantilla
+            </button>
           </div>
           <div style="flex: 1;">
             <label style="font-weight: bold;"><i class="fas fa-user-graduate" style="color:#003366;"></i> Listado de Alumnos</label>
-            <input type="file" (change)="leerExcel($event, 'alumnos')" accept=".xlsx, .xls" class="form-control">
+            <input type="file" (change)="leerExcel($event, 'alumnos')" accept=".xlsx, .xls" class="form-control" style="margin-bottom: 10px;">
+            <button class="btn-umg-play" style="background-color: #003366; font-size: 0.8rem; padding: 5px 10px; width: 100%;" (click)="generarPlantilla('alumnos')">
+              <i class="fas fa-magic"></i> Generar Plantilla
+            </button>
           </div>
         </div>
       </div>
 
+      <!-- ZONA DE PRIVADOS Y SEMINARIOS -->
       <ng-container *ngIf="eventoSeleccionado?.id !== 3">
         <div *ngIf="eventoSeleccionado?.id === 1 && profesoresNormal.length > 0" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-top: 4px solid #f59e0b; text-align: center;">
           <h3 style="margin-top: 0; color: #003366;"><i class="fas fa-tag" style="color: #003366;"></i> Asignar Área al Sorteo</h3>
@@ -129,6 +136,7 @@
         </div>
       </ng-container>
 
+      <!-- ZONA DE TESIS -->
       <ng-container *ngIf="eventoSeleccionado?.id === 3">
         <div class="stats-grid">
           <div class="stat-card"><h3><i class="fas fa-user-graduate" style="color:#003366;"></i> Alumnos Restantes</h3><p class="stat-number">{{ alumnosTesis.length }}</p></div>

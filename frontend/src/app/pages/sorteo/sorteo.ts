@@ -2,8 +2,6 @@
  * @fileoverview Lógica principal del motor de sorteos y asignaciones académicas.
  * Maneja la lectura de archivos Excel, el cálculo matemático para la distribución 
  * equitativa de alumnos y la animación visual de las ruletas.
- * La arquitectura se divide en dos "islas" de estado para aislar la lógica de 
- * Privados/Seminarios (1 a N) de la lógica de Tesis (3 a N).
  */
 
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
@@ -14,7 +12,6 @@ import { AsignacionService } from '../../services/asignacion';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 
-// Definición de las estructuras de datos base para el tipado estricto
 export interface Profesor { id?: number; nombre_completo: string; area?: string; }
 export interface Alumno { id?: number; carnet: string; nombre_completo: string; }
 
@@ -26,18 +23,20 @@ export interface Alumno { id?: number; carnet: string; nombre_completo: string; 
   styleUrl: './sorteo.css'
 })
 export class SorteoComponent implements OnInit {
-  // Variables de configuración inicial
   configuracionLista: boolean = false;
-  tiposEvento: any[] = [];
+  tiposEvento: any[] = [
+    { id: 1, nombre: 'Examen Privado', descripcion: 'Evaluación por Áreas' },
+    { id: 2, nombre: 'Seminario', descripcion: 'Asignación General' },
+    { id: 3, nombre: 'Tesis', descripcion: 'Terna Evaluadora' }
+  ];
   eventoSeleccionado: any = null;
 
-  // Paleta de colores estática para renderizar las porciones de la ruleta
   coloresRuleta: string[] = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#e83e8c', '#fd7e14', '#20c997', '#6c757d'];
   nombreArchivoProfesores: string = ''; 
   nombreArchivoAlumnos: string = '';
 
   // =========================================================
-  // Metodo 1: PRIVADOS Y SEMINARIO (Maneja Modalidades 1 y 2)
+  // Metodo 1: PRIVADOS Y SEMINARIO
   // =========================================================
   areaSeleccionada: string = '';
   areasDisponibles: string[] = ['Análisis, Diseño y Desarrollo', 'Administración de Sistemas', 'Ciencias de la Ingeniería'];
@@ -61,7 +60,7 @@ export class SorteoComponent implements OnInit {
   alumnoGanadorTemporalNormal: Alumno | null = null; 
 
   // =========================================================
-  // Metodo 2: TESIS (Maneja Modalidad 3 EXCLUSIVAMENTE)
+  // Metodo 2: TESIS
   // =========================================================
   profesoresTesis: Profesor[] = []; 
   alumnosTesis: Alumno[] = []; 
@@ -79,31 +78,27 @@ export class SorteoComponent implements OnInit {
   girandoTesisProfe: boolean = false;
   gradosRotacionTesisAlum: number = 0; 
   girandoTesisAlum: boolean = false;
+  
+  profesorGanadorTemporalTesis: Profesor | null = null;
+  alumnoGanadorTemporalTesis: Alumno | null = null;
 
-  constructor(
-    private asignacionService: AsignacionService, 
-    private cdr: ChangeDetectorRef, 
-    private http: HttpClient
-  ) {}
+  constructor(private asignacionService: AsignacionService, private cdr: ChangeDetectorRef, private http: HttpClient) {}
 
-  /**
-   * Ciclo de vida inicial del componente.
-   * Consulta al backend las modalidades disponibles para llenar el select de configuración.
-   */
   ngOnInit() {
     this.http.get<any[]>('http://localhost:3000/api/tipos-evento').subscribe({
-      next: (data) => {
-        this.tiposEvento = data;
+      next: (data) => { 
+        if (data && data.length > 0) {
+          this.tiposEvento = data; 
+        }
         this.cdr.detectChanges(); 
       },
-      error: (err) => console.error("Error al cargar modalidades:", err)
+      error: (err) => {
+        console.warn("No se pudo cargar desde la API, usando valores locales:", err);
+        this.cdr.detectChanges();
+      }
     });
   }
 
-  /**
-   * Bloquea la vista de configuración y habilita la zona de sorteo
-   * previa validación de que se haya seleccionado un evento.
-   */
   confirmarConfiguracion() {
     if (!this.eventoSeleccionado) { 
       Swal.fire('Acción Requerida', 'Debes seleccionar la Modalidad.', 'warning'); 
@@ -112,26 +107,60 @@ export class SorteoComponent implements OnInit {
     this.configuracionLista = true;
   }
 
-  /**
-   * @function leerExcel
-   * @description Procesa los archivos Excel subidos por el usuario, convierte sus hojas 
-   * a formato JSON y distribuye la data limpia hacia la isla de estado correspondiente.
-   * @param evento - Evento DOM del input type="file".
-   * @param tipo - Identificador para saber si procesamos profesores o alumnos.
-   */
+  // =========================================================
+  // GENERADOR DE PLANTILLAS EXCEL
+  // =========================================================
+  generarPlantilla(tipo: 'profesores' | 'alumnos') {
+    let titulo = tipo === 'profesores' ? 'Plantilla de Catedráticos' : 'Plantilla de Alumnos';
+    let instrucciones = tipo === 'profesores' 
+      ? 'Escribe un nombre por línea (Ej: Ing ---\nIng ---\nIng ---)' 
+      : 'Escribe Carnet y Nombre separados por una coma (Ej: xxx-xx-xxxx, A--- B---)';
+
+    Swal.fire({
+      title: titulo,
+      input: 'textarea',
+      inputLabel: instrucciones,
+      inputPlaceholder: 'Ingresa los datos aquí...',
+      inputAttributes: { 'aria-label': 'Ingresa los datos aquí' },
+      showCancelButton: true,
+      confirmButtonText: 'Generar Excel',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#003366',
+      width: '600px'
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const lineas = result.value.split('\n').filter((l: string) => l.trim() !== '');
+        let datosExportar: any[] = [];
+
+        if (tipo === 'profesores') {
+          datosExportar = lineas.map((nombre: string) => ({ 'Nombre Catedratico ': nombre.trim() }));
+        } else {
+          datosExportar = lineas.map((linea: string) => {
+            const partes = linea.split(',');
+            return {
+              'Carnet': partes[0] ? partes[0].trim() : '',
+              'Nombre Alumno': partes[1] ? partes[1].trim() : 'Desconocido'
+            };
+          });
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(datosExportar);
+        const workbook = { Sheets: { 'Datos': worksheet }, SheetNames: ['Datos'] };
+        XLSX.writeFile(workbook, `Plantilla_${tipo}.xlsx`);
+        
+        Swal.fire('¡Plantilla Generada!', `Sube el archivo Plantilla_${tipo}.xlsx en el botón de al lado.`, 'success');
+      }
+    });
+  }
+
   leerExcel(evento: any, tipo: 'profesores' | 'alumnos') {
     const target: DataTransfer = <DataTransfer>(evento.target);
     if (target.files.length !== 1) return;
     const file = target.files[0]; 
     const fileName = file.name;
 
-    // Validación para evitar que el usuario suba el mismo archivo en ambos inputs
-    if (tipo === 'profesores' && fileName === this.nombreArchivoAlumnos && fileName !== '') { 
-      Swal.fire('Error', 'Archivo duplicado.', 'error'); evento.target.value = ''; return; 
-    }
-    if (tipo === 'alumnos' && fileName === this.nombreArchivoProfesores && fileName !== '') { 
-      Swal.fire('Error', 'Archivo duplicado.', 'error'); evento.target.value = ''; return; 
-    }
+    if (tipo === 'profesores' && fileName === this.nombreArchivoAlumnos && fileName !== '') { Swal.fire('Error', 'Archivo duplicado.', 'error'); evento.target.value = ''; return; }
+    if (tipo === 'alumnos' && fileName === this.nombreArchivoProfesores && fileName !== '') { Swal.fire('Error', 'Archivo duplicado.', 'error'); evento.target.value = ''; return; }
 
     const reader: FileReader = new FileReader();
     reader.onload = (e: any) => {
@@ -142,7 +171,6 @@ export class SorteoComponent implements OnInit {
       const datosExcel = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
       let datosUtiles = datosExcel.filter(fila => Array.isArray(fila) && fila.length > 0);
       
-      // Limpieza de encabezados si el Excel incluye títulos en la primera fila
       if (datosUtiles.length > 0 && typeof datosUtiles[0][0] === 'string') {
         const posibleTitulo = String(datosUtiles[0][0]).toLowerCase();
         if (posibleTitulo.includes('nombre') || posibleTitulo.includes('carnet') || posibleTitulo.includes('catedratico') || posibleTitulo.includes('area') || posibleTitulo.includes('área')) {
@@ -152,34 +180,23 @@ export class SorteoComponent implements OnInit {
 
       if (tipo === 'profesores') {
         this.nombreArchivoProfesores = fileName;
-        
-        // Filtro estricto para ignorar filas vacías o datos corruptos (undefined) en la cola del Excel
         const profesMapeados = datosUtiles
           .filter(fila => fila[0] !== undefined && fila[0] !== null && String(fila[0]).trim() !== '')
-          .map((fila, index) => ({ 
-            id: index + 1, 
-            nombre_completo: String(fila[0]).trim(), 
-            area: '' 
-          }));
+          .map((fila, index) => ({ id: index + 1, nombre_completo: String(fila[0]).trim(), area: '' }));
         
-        // Distribución de datos según la modalidad seleccionada
         if (this.eventoSeleccionado?.id === 3) {
-          // Aislamiento de datos para Tesis
           this.matematicaTesisCalculada = false;
           this.profesoresTesis = [...profesMapeados];
           Swal.fire('Éxito', `${this.profesoresTesis.length} catedráticos cargados para Tesis.`, 'success');
           this.calcularMatematicaTesis();
         } else {
-          // Aislamiento de datos para Privados y Seminario
           this.contadoresAreas = {}; 
           this.profesoresBaseNormal = [...profesMapeados];
-          
           if (this.eventoSeleccionado?.id === 1) {
             this.profesoresNormal = [...this.profesoresBaseNormal]; 
             this.areaSeleccionada = '';
             Swal.fire('Excel Cargado', `Detectados ${this.profesoresBaseNormal.length} catedráticos. Selecciona un Área.`, 'info');
           } else {
-            // Lógica específica para Seminario: Asignación aleatoria de IDs sin área
             let numerosDisponibles = Array.from({length: this.profesoresBaseNormal.length}, (_, i) => i + 1);
             for (let i = numerosDisponibles.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -194,8 +211,6 @@ export class SorteoComponent implements OnInit {
 
       } else if (tipo === 'alumnos') {
         this.nombreArchivoAlumnos = fileName;
-        
-        // Filtro estricto para ignorar filas vacías o datos corruptos (undefined)
         const alumnosMapeados = datosUtiles
           .filter(fila => fila[0] !== undefined && fila[0] !== null && String(fila[0]).trim() !== '')
           .map((fila, index) => ({ 
@@ -218,20 +233,17 @@ export class SorteoComponent implements OnInit {
     reader.readAsBinaryString(target.files[0]);
   }
 
-  // =========================================================
-  // FUNCIONES DE FORMATEO Y CÁLCULO VISUAL (COMPARTIDAS)
-  // =========================================================
-  
   obtenerNombreCorto(nombre: string): string {
     if (!nombre) return '';
-    return nombre.replace(/Ing\.|Lic\.|Arq\.|Dr\./g, '').trim().split(' ')[0];
+    return nombre.trim();
   }
   
   obtenerNombreAlumnoCorto(alu: Alumno): string {
     if (!alu) return '';
     const primerNombre = alu.nombre_completo.trim().split(' ')[0] || '';
-    const partesCarnet = alu.carnet.split('-');
-    return `${primerNombre} - ${partesCarnet[partesCarnet.length - 1]?.trim() || ''}`;
+    const partesCarnet = (alu.carnet || '').trim().split('-');
+    const numeroFinal = partesCarnet.length > 1 ? partesCarnet[partesCarnet.length - 1].trim() : (alu.carnet || '').trim();
+    return `${primerNombre} - ${numeroFinal}`;
   }
   
   obtenerNombreAlumnoLista(alu: Alumno): string {
@@ -254,15 +266,10 @@ export class SorteoComponent implements OnInit {
     return gradiente + ')';
   }
 
-  /**
-   * Calcula los grados matemáticos necesarios para que la animación CSS de la ruleta
-   * se detenga exactamente en la porción del elemento ganador.
-   */
   calcularRotacionExacta(rotacionActual: number, totalElementos: number, indiceGanador: number): number {
     const angulo = 360 / totalElementos;
     const anguloCentroPorcion = (indiceGanador * angulo) + (angulo / 2);
     const modObjetivo = (360 - anguloCentroPorcion) % 360;
-    // Se añaden vueltas base aleatorias para el efecto visual de giro
     const vueltasBase = (Math.floor(Math.random() * 4) + 5) * 360;
     let diferencia = modObjetivo - (rotacionActual % 360);
     if (diferencia < 0) diferencia += 360; 
@@ -270,34 +277,22 @@ export class SorteoComponent implements OnInit {
   }
 
   // =========================================================
-  // LÓGICA EXCLUSIVA: METODO NORMAL (PRIVADOS Y SEMINARIO)
+  // METODO NORMAL
   // =========================================================
-  
-  /**
-   * Filtra y prepara la lista de profesores para una zona específica.
-   */
   seleccionarArea(area: string) {
     if (this.catedraticoGanadorNormal !== null) return; 
     if (!area) return;
     this.areaSeleccionada = area;
-    
     this.profesoresNormal = [...this.profesoresBaseNormal];
-
-    // Aleatorización Fisher-Yates para barajar los IDs de los grupos
     let numerosDisponibles = Array.from({length: this.profesoresNormal.length}, (_, i) => i + 1);
     for (let i = numerosDisponibles.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [numerosDisponibles[i], numerosDisponibles[j]] = [numerosDisponibles[j], numerosDisponibles[i]];
     }
-    
     this.profesoresNormal = this.profesoresNormal.map((p, index) => ({ ...p, id: numerosDisponibles[index] }));
     this.calcularMatematicaNormal();
   }
 
-  /**
-   * Calcula el cociente y el residuo para distribuir a los alumnos 
-   * equitativamente entre los profesores disponibles.
-   */
   calcularMatematicaNormal() {
     if (this.profesoresNormal.length > 0 && this.alumnosNormal.length > 0) {
       this.cupoBaseNormal = Math.floor(this.alumnosNormal.length / this.profesoresNormal.length);
@@ -324,13 +319,11 @@ export class SorteoComponent implements OnInit {
     setTimeout(() => {
       this.girandoNormalProfe = false;
       const profeGanador = this.profesoresNormal[indice];
-      
       const clave = this.areaSeleccionada || 'General';
       const numeroGrupoOrdenado = (this.contadoresAreas[clave] || 0) + 1;
       profeGanador.id = numeroGrupoOrdenado; 
 
       this.catedraticoGanadorNormal = profeGanador;
-      // Se distribuye un alumno extra (sobrante) si aún hay disponibles
       this.cupoActualNormal = this.cupoBaseNormal + (this.sobrantesNormal > 0 ? 1 : 0);
       
       let mensaje = `Se le ha asignado la Terna #${numeroGrupoOrdenado} a ${this.catedraticoGanadorNormal.nombre_completo}.`;
@@ -343,7 +336,6 @@ export class SorteoComponent implements OnInit {
   }
 
   iniciarSorteoAlumnosNormal() {
-    // Si hay un alumno en pantalla por el sorteo anterior, lo sacamos del pool principal
     if (this.alumnoGanadorTemporalNormal) {
       const idx = this.alumnosNormal.findIndex(a => a.id === this.alumnoGanadorTemporalNormal!.id);
       if (idx !== -1) this.alumnosNormal.splice(idx, 1);
@@ -369,7 +361,7 @@ export class SorteoComponent implements OnInit {
         setTimeout(() => Swal.fire('¡Cupo Lleno!', `La terna ha sido completada.`, 'info'), 600);
       }
       this.cdr.detectChanges();
-    }, 4000);
+    }, 4000); 
   }
 
   guardarTernaNormal() {
@@ -388,21 +380,17 @@ export class SorteoComponent implements OnInit {
       nombreFinal = `Terna #${this.catedraticoGanadorNormal.id} - ${nombreFinal}`;
     }
 
-    // Persistencia en base de datos vía servicio HTTP
     this.asignacionService.guardarTerna(nombreFinal, this.alumnosAsignadosNormal, this.eventoSeleccionado.id).subscribe({
       next: () => {
         Swal.fire('¡Guardado!', 'Asignación registrada correctamente.', 'success');
-        
         const clave = this.areaSeleccionada || 'General';
         this.contadoresAreas[clave] = (this.contadoresAreas[clave] || 0) + 1;
 
-        // Limpieza del catedrático que acaba de conformar grupo
         this.profesoresNormal = this.profesoresNormal.filter(p => p.nombre_completo !== this.catedraticoGanadorNormal?.nombre_completo);
         if (this.eventoSeleccionado?.id === 1) {
           this.profesoresBaseNormal = this.profesoresBaseNormal.filter(p => p.nombre_completo !== this.catedraticoGanadorNormal?.nombre_completo);
         }
 
-        // Reseteo de variables para el siguiente ciclo
         this.catedraticoGanadorNormal = null; 
         this.alumnosAsignadosNormal = []; 
         if (this.eventoSeleccionado?.id === 1) { this.areaSeleccionada = ''; }
@@ -414,60 +402,81 @@ export class SorteoComponent implements OnInit {
   }
 
   // =========================================================
-  // LÓGICA EXCLUSIVA: METODO TESIS (Modalidad 3)
+  // METODO TESIS
   // =========================================================
-
-  /**
-   * Establece cuántas ternas completas (de 3 jurados) se pueden armar 
-   * y cómo se distribuirán los alumnos base y los residuos en cada una.
-   */
   calcularMatematicaTesis() {
     if (!this.matematicaTesisCalculada && this.profesoresTesis.length > 0 && this.alumnosTesis.length > 0) {
       this.cantidadTernasTesis = Math.ceil(this.profesoresTesis.length / 3);
       if (this.cantidadTernasTesis === 0) this.cantidadTernasTesis = 1;
-
       this.cupoBaseTesis = Math.floor(this.alumnosTesis.length / this.cantidadTernasTesis);
       this.sobrantesTesis = this.alumnosTesis.length % this.cantidadTernasTesis;
-      
       this.matematicaTesisCalculada = true; 
     }
     this.cdr.detectChanges();
   }
 
   iniciarSorteoTesisCatedratico() {
+    if (this.profesorGanadorTemporalTesis) {
+      const idx = this.profesoresTesis.findIndex(p => p.id === this.profesorGanadorTemporalTesis!.id);
+      if (idx !== -1) this.profesoresTesis.splice(idx, 1);
+      this.profesorGanadorTemporalTesis = null;
+    }
+
     if (this.alumnosTesis.length === 0) { 
       Swal.fire('¡Sorteo Finalizado!', 'Ya no hay alumnos disponibles para conformar más jurados.', 'info'); 
       return; 
     }
-
-    // Se crea un pool temporal que excluye a los profesores ya seleccionados en esta misma terna
-    // para evitar que un mismo catedrático sea Presidente y Vocal simultáneamente.
-    const poolDisponibleParaEstaTerna = this.profesoresTesis.filter(p => 
-      !this.catedraticosTesisAsignados.some(asignado => asignado.nombre_completo === p.nombre_completo)
-    );
-
-    if (this.girandoTesisProfe || this.catedraticosTesisAsignados.length >= 3 || poolDisponibleParaEstaTerna.length === 0) return;
+    
+    if (this.girandoTesisProfe || this.catedraticosTesisAsignados.length >= 3 || this.profesoresTesis.length === 0) return;
     
     this.girandoTesisProfe = true;
     
-    const indice = Math.floor(Math.random() * poolDisponibleParaEstaTerna.length);
-    this.gradosRotacionTesisProfe = this.calcularRotacionExacta(this.gradosRotacionTesisProfe, poolDisponibleParaEstaTerna.length, indice);
+    const indice = Math.floor(Math.random() * this.profesoresTesis.length);
+    this.gradosRotacionTesisProfe = this.calcularRotacionExacta(this.gradosRotacionTesisProfe, this.profesoresTesis.length, indice);
 
     setTimeout(() => {
       this.girandoTesisProfe = false;
-      const ganador = poolDisponibleParaEstaTerna[indice];
-      
+      const ganador = this.profesoresTesis[indice];
       this.catedraticosTesisAsignados.push(ganador);
+      this.profesorGanadorTemporalTesis = ganador;
       
-      if (this.catedraticosTesisAsignados.length >= 3) { 
+      const roles = ['Presidente', 'Vocal 1', 'Vocal 2'];
+      const rolAsignado = roles[this.catedraticosTesisAsignados.length - 1];
+
+      if (this.catedraticosTesisAsignados.length < 3) {
+        Swal.fire({
+          title: `¡${rolAsignado} Seleccionado!`,
+          html: `<h2 style="color: #003366; margin: 15px 0;">${ganador.nombre_completo}</h2>
+                 <p style="color: #555; font-size: 1.05rem;">Se ha integrado con éxito al jurado examinador (${this.catedraticosTesisAsignados.length}/3).</p>`,
+          icon: 'success',
+          confirmButtonColor: '#003366',
+          confirmButtonText: 'Continuar Sorteo'
+        });
+      } else {
         this.cupoActualTesis = this.cupoBaseTesis + (this.sobrantesTesis > 0 ? 1 : 0);
-        Swal.fire('¡Jurado Completo!', `Se han asignado los 3 catedráticos. Ahora sortea a los ${this.cupoActualTesis} alumnos uno por uno.`, 'info'); 
+        Swal.fire({
+          title: `¡${rolAsignado} Seleccionado!`,
+          html: `<h2 style="color: #003366; margin: 15px 0;">${ganador.nombre_completo}</h2>
+                 <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
+                 <h3 style="color: #10b981; margin-bottom: 8px;"><i class="fas fa-check-circle"></i> ¡Terna Completada!</h3>
+                 <p style="color: #444; font-size: 1.05rem;">Se han asignado los 3 catedráticos requeridos.</p>
+                 <p style="color: #666; margin-top: 5px;">Procede a sortear individualmente a los <strong>${this.cupoActualTesis}</strong> alumnos asignados a este jurado.</p>`,
+          icon: 'success',
+          confirmButtonColor: '#003366',
+          confirmButtonText: 'Comenzar Asignación de Alumnos'
+        });
       }
       this.cdr.detectChanges();
     }, 4000);
   }
 
   iniciarSorteoTesisAlumnoIndividual() {
+    if (this.alumnoGanadorTemporalTesis) {
+      const idx = this.alumnosTesis.findIndex(a => a.id === this.alumnoGanadorTemporalTesis!.id);
+      if (idx !== -1) this.alumnosTesis.splice(idx, 1);
+      this.alumnoGanadorTemporalTesis = null;
+    }
+
     if (this.catedraticosTesisAsignados.length < 3) { Swal.fire('Atención', 'Debes conformar el jurado de 3 catedráticos primero.', 'warning'); return; }
     if (this.girandoTesisAlum || this.alumnosTesisAsignados.length >= this.cupoActualTesis || this.alumnosTesis.length === 0) return;
     
@@ -480,13 +489,33 @@ export class SorteoComponent implements OnInit {
       const ganador = this.alumnosTesis[indice];
       
       this.alumnosTesisAsignados.push(ganador);
-      // El alumno asignado se remueve definitivamente del pool global
-      this.alumnosTesis.splice(indice, 1);
+      this.alumnoGanadorTemporalTesis = ganador;
       
-      Swal.fire({ title: 'Alumno Asignado', text: `${ganador.nombre_completo} fue asignado a la terna.`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+      const totalAsignados = this.alumnosTesisAsignados.length;
+      const esUltimo = totalAsignados >= this.cupoActualTesis;
 
-      if (this.alumnosTesisAsignados.length >= this.cupoActualTesis) {
-         setTimeout(() => Swal.fire('¡Cupo Lleno!', `La terna de ${this.cupoActualTesis} alumnos está completa.`, 'info'), 600);
+      if (!esUltimo) {
+        Swal.fire({
+          title: '¡Alumno Seleccionado!',
+          html: `<h2 style="color: #CC0000; margin: 12px 0;">${ganador.nombre_completo}</h2>
+                 <p style="font-size: 1.15rem; color: #333; margin-bottom: 5px;">Carnet: <strong>${ganador.carnet}</strong></p>
+                 <p style="font-size: 0.95rem; color: #666;">Alumno ${totalAsignados} de ${this.cupoActualTesis} asignados a esta terna.</p>`,
+          icon: 'success',
+          confirmButtonColor: '#CC0000',
+          confirmButtonText: 'Continuar Sorteo'
+        });
+      } else {
+        Swal.fire({
+          title: '¡Alumno Seleccionado!',
+          html: `<h2 style="color: #CC0000; margin: 12px 0;">${ganador.nombre_completo}</h2>
+                 <p style="font-size: 1.15rem; color: #333; margin-bottom: 5px;">Carnet: <strong>${ganador.carnet}</strong></p>
+                 <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
+                 <h3 style="color: #003366; margin-bottom: 8px;"><i class="fas fa-users"></i> ¡Grupo Completo (${totalAsignados}/${this.cupoActualTesis})!</h3>
+                 <p style="color: #555; font-size: 1rem;">Se ha completado el cupo de alumnos para esta terna. Ya puedes registrarla oficialmente.</p>`,
+          icon: 'success',
+          confirmButtonColor: '#003366',
+          confirmButtonText: 'Listo para Guardar'
+        });
       }
       this.cdr.detectChanges();
     }, 4000); 
@@ -495,24 +524,31 @@ export class SorteoComponent implements OnInit {
   guardarTesisOficial() {
     if (this.alumnosTesisAsignados.length === 0 || this.catedraticosTesisAsignados.length < 3) return;
     
+    if (this.profesorGanadorTemporalTesis) {
+      const idx = this.profesoresTesis.findIndex(p => p.id === this.profesorGanadorTemporalTesis!.id);
+      if (idx !== -1) this.profesoresTesis.splice(idx, 1);
+      this.profesorGanadorTemporalTesis = null;
+    }
+
+    if (this.alumnoGanadorTemporalTesis) {
+      const idx = this.alumnosTesis.findIndex(a => a.id === this.alumnoGanadorTemporalTesis!.id);
+      if (idx !== -1) this.alumnosTesis.splice(idx, 1);
+      this.alumnoGanadorTemporalTesis = null;
+    }
+
     let guardados = 0;
     const totalAGuardar = this.alumnosTesisAsignados.length;
 
-    // Iteración para guardar los múltiples registros vinculados a un mismo jurado
     this.alumnosTesisAsignados.forEach(alu => {
       this.asignacionService.guardarTesis(alu, this.catedraticosTesisAsignados, this.eventoSeleccionado.id).subscribe({
         next: () => {
           guardados++;
-          // Validación para confirmar que todas las transacciones HTTP terminaron
           if (guardados === totalAGuardar) {
             Swal.fire('¡Guardado!', 'El jurado y su grupo de alumnos han sido registrados correctamente.', 'success');
             if (this.sobrantesTesis > 0) this.sobrantesTesis--;
-
-            // Limpieza de variables temporales de la terna para iniciar la siguiente
             this.alumnosTesisAsignados = []; 
             this.catedraticosTesisAsignados = []; 
             this.calcularMatematicaTesis(); 
-            
             if (this.alumnosTesis.length === 0) { Swal.fire('¡Finalizado!', 'Todos los tesistas han sido asignados.', 'success'); }
           }
         },
